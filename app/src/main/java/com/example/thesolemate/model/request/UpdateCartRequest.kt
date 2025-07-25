@@ -1,7 +1,6 @@
 package com.example.thesolemate.model.request
 
-data class CartRequest(
-    val user_id: Int,
-    val shoe_id: Int,
+data class UpdateCartRequest(
+    val cart_id: Int,
     val quantity: Int
 )

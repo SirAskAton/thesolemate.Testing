@@ -14,6 +14,7 @@ import androidx.navigation.NavHostController
 import com.example.thesolemate.data.remote.ApiClient
 import com.example.thesolemate.model.request.LoginRequest
 import com.example.thesolemate.navigation.Screen
+import com.example.thesolemate.session.SessionManager
 import kotlinx.coroutines.launch
 
 @Composable
@@ -26,6 +27,7 @@ fun LoginScreen(navController: NavHostController) {
 
     val focusManager = LocalFocusManager.current
     val context = LocalContext.current
+    val sessionManager = remember { SessionManager(context) }
     val coroutineScope = rememberCoroutineScope()
 
     Column(
@@ -99,12 +101,18 @@ fun LoginScreen(navController: NavHostController) {
                     try {
                         val response = ApiClient.apiService.login(loginRequest)
                         isLoading = false
+
                         if (response.isSuccessful && response.body()?.status == true) {
-                            val userId = response.body()?.user?.id ?: -1
-                            navController.navigate(Screen.Home.createRoute(userId)) {
+                            val userId = response.body()?.user_id ?: -1
+
+                            // ✅ Simpan user ID ke SharedPreferences
+                            sessionManager.saveUserId(userId)
+
+                            Toast.makeText(context, "Login berhasil", Toast.LENGTH_SHORT).show()
+
+                            navController.navigate(Screen.Home.route) {
                                 popUpTo(Screen.Login.route) { inclusive = true }
                             }
-
                         }
                         else {
                             Toast.makeText(

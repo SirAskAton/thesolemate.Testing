@@ -1,8 +1,7 @@
 package com.example.thesolemate.repository
 
 import com.example.thesolemate.data.remote.ApiService
-import com.example.thesolemate.model.request.CartRequest
-import com.example.thesolemate.model.request.UserIdRequest
+import com.example.thesolemate.model.request.*
 import com.example.thesolemate.model.response.CartActionResponse
 import com.example.thesolemate.model.response.CartItemResponse
 import retrofit2.Response
@@ -12,10 +11,11 @@ class CartRepository(private val apiService: ApiService) {
     // Mendapatkan data cart berdasarkan userId
     suspend fun getCart(userId: Int): List<CartItemResponse> {
         val response = apiService.getCart(UserIdRequest(userId))
-        if (response.isSuccessful) {
-            return (response.body() ?: emptyList()) as List<CartItemResponse>
+        val body = response.body()
+        if (response.isSuccessful && body?.success == true) {
+            return body.data ?: emptyList()
         } else {
-            throw Exception("Gagal memuat cart: ${response.code()}")
+            throw Exception("Gagal memuat cart: ${response.code()} - ${body?.message}")
         }
     }
 
@@ -29,13 +29,21 @@ class CartRepository(private val apiService: ApiService) {
         return apiService.updateCart(cartId, request)
     }
 
-    // Menghapus item dari cart
-    suspend fun removeFromCart(cartId: Int): Response<CartActionResponse> {
-        return apiService.removeFromCart(cartId)
+    // ✅ Memperbarui quantity item
+    suspend fun updateCartQuantity(cartId: Int, quantity: Int): Response<CartActionResponse> {
+        val request = UpdateCartRequest(cart_id = cartId, quantity = quantity)
+        return apiService.updateCartQuantity(request)
     }
 
-    // Melakukan checkout untuk user
+    // ✅ Menghapus item dari cart
+    suspend fun deleteCartItem(cartId: Int): Response<CartActionResponse> {
+        val request = DeleteCartRequest(cart_id = cartId)
+        return apiService.deleteCartItem(request)
+    }
+
+    // Melakukan checkout
     suspend fun checkout(userId: Int): Response<CartActionResponse> {
-        return apiService.checkout(mapOf("user_id" to userId))
+        val body = mapOf("user_id" to userId)
+        return apiService.checkout(body)
     }
 }

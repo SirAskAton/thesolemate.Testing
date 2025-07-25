@@ -1,6 +1,5 @@
 package com.example.thesolemate.screen
 
-import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
@@ -9,6 +8,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material.icons.filled.ShoppingCartCheckout
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -20,11 +20,12 @@ import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
 import com.example.thesolemate.R
 import com.example.thesolemate.data.repository.ShoeRepository
-import com.example.thesolemate.repository.CartRepository
-import kotlinx.coroutines.launch
 import com.example.thesolemate.model.request.CartRequest
 import com.example.thesolemate.model.response.ShoeResponse
 import com.example.thesolemate.navigation.Screen
+import com.example.thesolemate.repository.CartRepository
+import com.example.thesolemate.session.SessionManager
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -32,15 +33,34 @@ fun HomeScreen(
     navController: NavController,
     shoeRepository: ShoeRepository,
     cartRepository: CartRepository,
-    userId: Int
+    user_id: Int
 ) {
     val context = LocalContext.current
+    val session = remember { SessionManager(context) }
     val scope = rememberCoroutineScope()
+
+    val userId = session.getUserId()
 
     var shoes by remember { mutableStateOf<List<ShoeResponse>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
 
-    // Fetch data sepatu dari API
+    // 👇 Track jumlah isi keranjang
+    var cartItemCount by remember { mutableStateOf(0) }
+
+    // 🔁 Cek isi keranjang saat layar muncul
+    fun checkCart() {
+        scope.launch {
+            try {
+                val cartItems = cartRepository.getCart(userId) // Langsung dapat List<CartItem>
+                cartItemCount = cartItems.size
+            } catch (e: Exception) {
+                cartItemCount = 0
+            }
+        }
+    }
+
+
+
     LaunchedEffect(true) {
         try {
             val response = shoeRepository.getShoes()
@@ -51,6 +71,7 @@ fun HomeScreen(
             Toast.makeText(context, "Gagal memuat sepatu", Toast.LENGTH_SHORT).show()
         } finally {
             loading = false
+            checkCart()
         }
     }
 
@@ -61,7 +82,10 @@ fun HomeScreen(
                 IconButton(onClick = {
                     navController.navigate(Screen.Cart.createRoute(userId))
                 }) {
-                    Icon(Icons.Default.ShoppingCart, contentDescription = "Cart")
+                    Icon(
+                        imageVector = if (cartItemCount > 0) Icons.Filled.ShoppingCartCheckout else Icons.Filled.ShoppingCart,
+                        contentDescription = "Keranjang"
+                    )
                 }
             }
         )
@@ -84,11 +108,8 @@ fun HomeScreen(
                                     .weight(1f)
                                     .padding(8.dp)
                                     .clickable {
-                                        Log.d("HomeScreen", "Navigating to detail for shoeId=${shoe.id}")
-
                                         navController.navigate(Screen.ShoeDetail.createRoute(shoe.id, userId))
-                                    }
-                                ,
+                                    },
                                 elevation = CardDefaults.cardElevation(4.dp)
                             ) {
                                 Column(
@@ -131,6 +152,7 @@ fun HomeScreen(
                                                             "Ditambahkan ke keranjang",
                                                             Toast.LENGTH_SHORT
                                                         ).show()
+                                                        checkCart() // 🔁 Cek ulang isi keranjang
                                                     } else {
                                                         Toast.makeText(
                                                             context,

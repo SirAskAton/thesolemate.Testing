@@ -18,6 +18,7 @@ import kotlinx.coroutines.launch
 import java.text.NumberFormat
 import java.util.*
 
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReceiptScreen(navController: NavController, userId: Int) {
@@ -60,7 +61,7 @@ fun ReceiptScreen(navController: NavController, userId: Int) {
         Spacer(Modifier.height(8.dp))
 
         cartItems.forEach {
-            Text("${it.name} - ${it.quantity} x ${it.price}")
+            Text("${it.shoe_name} - ${it.quantity} x ${it.price}")
         }
 
         Spacer(Modifier.height(16.dp))

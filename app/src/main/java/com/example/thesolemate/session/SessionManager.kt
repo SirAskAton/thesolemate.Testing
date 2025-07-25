@@ -1,10 +1,9 @@
-package com.example.thesolemate.utils
+package com.example.thesolemate.session
 
 import android.content.Context
-import android.content.SharedPreferences
 
-class PrefManager(context: Context) {
-    private val prefs: SharedPreferences = context.getSharedPreferences("user_prefs", Context.MODE_PRIVATE)
+class SessionManager(context: Context) {
+    private val prefs = context.getSharedPreferences("user_session", Context.MODE_PRIVATE)
 
     fun saveUserId(userId: Int) {
         prefs.edit().putInt("USER_ID", userId).apply()
@@ -14,7 +13,7 @@ class PrefManager(context: Context) {
         return prefs.getInt("USER_ID", -1)
     }
 
-    fun clear() {
+    fun clearSession() {
         prefs.edit().clear().apply()
     }
 }

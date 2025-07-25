@@ -17,6 +17,9 @@ import com.example.thesolemate.model.request.RegisterRequest
 import com.example.thesolemate.data.remote.ApiClient
 import com.example.thesolemate.navigation.Screen
 import kotlinx.coroutines.launch
+import okhttp3.ResponseBody
+import retrofit2.HttpException
+import java.io.IOException
 
 @Composable
 fun RegisterScreen(navController: NavHostController) {
@@ -60,7 +63,7 @@ fun RegisterScreen(navController: NavHostController) {
             modifier = Modifier.fillMaxWidth()
         )
         if (fullNameError) {
-            Text("Nama lengkap wajib diisi", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelSmall)
+            Text("Nama lengkap wajib diisi", color = MaterialTheme.colorScheme.error)
         }
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -76,7 +79,7 @@ fun RegisterScreen(navController: NavHostController) {
             modifier = Modifier.fillMaxWidth()
         )
         if (usernameError) {
-            Text("Username wajib diisi", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelSmall)
+            Text("Username wajib diisi", color = MaterialTheme.colorScheme.error)
         }
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -92,7 +95,7 @@ fun RegisterScreen(navController: NavHostController) {
             modifier = Modifier.fillMaxWidth()
         )
         if (emailError) {
-            Text("Email tidak valid", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelSmall)
+            Text("Email tidak valid", color = MaterialTheme.colorScheme.error)
         }
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -109,7 +112,7 @@ fun RegisterScreen(navController: NavHostController) {
             modifier = Modifier.fillMaxWidth()
         )
         if (passwordError) {
-            Text("Password wajib diisi", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelSmall)
+            Text("Password wajib diisi", color = MaterialTheme.colorScheme.error)
         }
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -126,7 +129,7 @@ fun RegisterScreen(navController: NavHostController) {
             modifier = Modifier.fillMaxWidth()
         )
         if (confirmPasswordError) {
-            Text("Password tidak cocok", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelSmall)
+            Text("Password tidak cocok", color = MaterialTheme.colorScheme.error)
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -135,6 +138,7 @@ fun RegisterScreen(navController: NavHostController) {
             onClick = {
                 focusManager.clearFocus()
 
+                // Validasi input
                 fullNameError = fullName.isBlank()
                 usernameError = username.isBlank()
                 emailError = email.isBlank() || !Patterns.EMAIL_ADDRESS.matcher(email).matches()
@@ -153,18 +157,23 @@ fun RegisterScreen(navController: NavHostController) {
                                     password = password
                                 )
                             )
+
                             isLoading = false
-                            val body = response.body()
 
                             if (response.isSuccessful) {
-                                val data = response.body()
-                                // lanjutkan
+                                Toast.makeText(context, "Registrasi berhasil!", Toast.LENGTH_SHORT).show()
+                                navController.navigate(Screen.Login.route)
                             } else {
-                                Log.e("Register", "Gagal: ${response.code()} - ${response.message()}")
-                                Toast.makeText(context, "Gagal: ${response.message()}", Toast.LENGTH_SHORT).show()
+                                val errorMsg = response.errorBody()?.string()
+                                Log.e("Register", "Gagal: ${response.code()} - $errorMsg")
+                                Toast.makeText(context, "Gagal: $errorMsg", Toast.LENGTH_LONG).show()
                             }
-
-
+                        } catch (e: HttpException) {
+                            isLoading = false
+                            Toast.makeText(context, "Http Error: ${e.message()}", Toast.LENGTH_LONG).show()
+                        } catch (e: IOException) {
+                            isLoading = false
+                            Toast.makeText(context, "Network Error: ${e.message}", Toast.LENGTH_LONG).show()
                         } catch (e: Exception) {
                             isLoading = false
                             Toast.makeText(context, "Error: ${e.localizedMessage}", Toast.LENGTH_LONG).show()

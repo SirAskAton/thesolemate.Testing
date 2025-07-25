@@ -26,4 +26,5 @@ class ShoeRepository(private val apiService: ApiService) {
     suspend fun deleteShoe(id: Int): Response<Unit> {
         return apiService.deleteShoe(id)
     }
+
 }

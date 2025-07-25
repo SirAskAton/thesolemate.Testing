@@ -1,22 +1,26 @@
 package com.example.thesolemate.navigation
 
+import android.content.Context
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.navigation.NavHostController
-import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import androidx.navigation.navArgument
 import com.example.thesolemate.data.remote.ApiClient
 import com.example.thesolemate.data.repository.ShoeRepository
 import com.example.thesolemate.repository.CartRepository
 import com.example.thesolemate.screen.*
+import com.example.thesolemate.session.SessionManager
+
 
 @Composable
-fun SetupNavGraph(navController: NavHostController) {
+fun SetupNavGraph(navController: NavHostController, context: Context) {
     val apiService = ApiClient.apiService
     val shoeRepository = remember { ShoeRepository(apiService) }
     val cartRepository = remember { CartRepository(apiService) }
+
+    val sessionManager = remember { SessionManager(context) }
+    val userId = sessionManager.getUserId()
 
     NavHost(
         navController = navController,
@@ -33,43 +37,29 @@ fun SetupNavGraph(navController: NavHostController) {
         }
 
         // Home
-        composable(
-            route = Screen.Home.route,
-            arguments = listOf(navArgument("userId") { type = NavType.IntType })
-        ) { backStackEntry ->
-            val userId = backStackEntry.arguments?.getInt("userId") ?: -1
+        composable(Screen.Home.route) {
             HomeScreen(
                 navController = navController,
                 shoeRepository = shoeRepository,
                 cartRepository = cartRepository,
-                userId = userId
+                user_id = userId
             )
         }
 
         // Cart
-        composable(
-            route = "cart/{userId}",
-            arguments = listOf(navArgument("userId") { type = NavType.IntType })
-        ) { backStackEntry ->
-            val userId = backStackEntry.arguments?.getInt("userId") ?: 0
-            CartScreen(navController, userId)
+        composable(Screen.Cart.route) {
+            CartScreen(navController)
         }
 
-
-
         // Shoe Detail
-        composable(
-            route = Screen.ShoeDetail.route,
-            arguments = listOf(
-                navArgument("shoeId") { type = NavType.IntType },
-                navArgument("userId") { type = NavType.IntType }
-            )
-        ) { backStackEntry ->
-            val shoeId = backStackEntry.arguments?.getInt("shoeId") ?: -1
-            val userId = backStackEntry.arguments?.getInt("userId") ?: -1
+
+        composable(Screen.ShoeDetail.route) { backStackEntry ->
+            val shoeId = backStackEntry.arguments?.getString("shoeId")?.toIntOrNull() ?: 0
+            val userId = backStackEntry.arguments?.getString("userId")?.toIntOrNull() ?: 0
+
             ShoeDetailScreen(
-                navController = navController,
                 shoeId = shoeId,
+                navController = navController,
                 userId = userId,
                 shoeRepository = shoeRepository,
                 cartRepository = cartRepository
@@ -77,6 +67,6 @@ fun SetupNavGraph(navController: NavHostController) {
         }
 
 
-        // Receipt (jika dibutuhkan, tambahkan implementasi di sini)
+        // Tambahkan halaman lainnya seperti Receipt jika ada
     }
 }

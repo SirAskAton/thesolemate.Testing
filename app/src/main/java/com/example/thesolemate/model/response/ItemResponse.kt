@@ -1,11 +1,4 @@
 package com.example.thesolemate.model.response
-
-
-class ItemResponse {
-}
-
-
-
 data class Shoe(
     val id: String,
     val name: String,

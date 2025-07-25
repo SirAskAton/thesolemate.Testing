@@ -1,7 +1,6 @@
 package com.example.thesolemate.screen
 
 import android.util.Log
-import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
@@ -14,11 +13,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import coil.compose.rememberAsyncImagePainter
-import com.example.thesolemate.data.remote.ApiClient.apiService
 import com.example.thesolemate.data.repository.ShoeRepository
 import com.example.thesolemate.model.request.CartRequest
-import com.example.thesolemate.model.request.UserIdRequest
 import com.example.thesolemate.model.response.ShoeResponse
+import com.example.thesolemate.navigation.Screen
 import com.example.thesolemate.repository.CartRepository
 import kotlinx.coroutines.launch
 
@@ -38,18 +36,17 @@ fun ShoeDetailScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(shoeId) {
         try {
-            val response = apiService.getShoeById(shoeId)
+            val response = shoeRepository.getShoeById(shoeId)
             if (response.isSuccessful) {
                 shoe = response.body()
-                isLoading = false
             } else {
                 errorMessage = "Gagal mengambil data sepatu: ${response.code()}"
-                isLoading = false
             }
         } catch (e: Exception) {
             errorMessage = "Terjadi kesalahan: ${e.message}"
+        } finally {
             isLoading = false
         }
     }
@@ -84,26 +81,35 @@ fun ShoeDetailScreen(
                     .fillMaxSize()
                     .padding(16.dp)
             ) {
+                val imageUrl = item.image_url ?: ""
                 Image(
-                    painter = rememberAsyncImagePainter(item.image_url),
+                    painter = rememberAsyncImagePainter(imageUrl),
                     contentDescription = item.name,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(250.dp)
                 )
+
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Text(text = item.name, style = MaterialTheme.typography.headlineSmall)
                 Text(text = "Brand: ${item.brand}", style = MaterialTheme.typography.bodyMedium)
                 Text(text = "Gender: ${item.gender}", style = MaterialTheme.typography.bodyMedium)
-                Text(text = "Price: Rp${item.price}", style = MaterialTheme.typography.bodyMedium)
+
+                val parsedPrice = item.price
+                Text(text = "Price: Rp${parsedPrice ?: "N/A"}", style = MaterialTheme.typography.bodyMedium)
 
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Text(
-                    text = item.description,
-                    style = MaterialTheme.typography.bodyLarge,
+                    text = "Deskripsi Produk",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(bottom = 4.dp)
+                )
+                Text(
+                    text = getDescriptionForShoe(item.brand, item.gender),
+                    style = MaterialTheme.typography.bodyMedium,
                     textAlign = TextAlign.Justify
                 )
 
@@ -119,11 +125,10 @@ fun ShoeDetailScreen(
                                     quantity = 1
                                 )
                                 val response = cartRepository.addToCart(cartItem)
-
                                 if (response.isSuccessful) {
                                     val body = response.body()
                                     if (body?.success == true) {
-                                        successMessage = body.message ?: "Berhasil menambahkan ke keranjang"
+                                        successMessage = body.message ?: "Berhasil ditambahkan"
                                         errorMessage = null
                                     } else {
                                         errorMessage = body?.message ?: "Gagal menambahkan"
@@ -136,7 +141,6 @@ fun ShoeDetailScreen(
                             } catch (e: Exception) {
                                 errorMessage = "Terjadi kesalahan: ${e.message}"
                                 successMessage = null
-                                Log.e("Cart", "Error: ${e.message}")
                             }
                         }
                     },
@@ -147,14 +151,11 @@ fun ShoeDetailScreen(
 
                 successMessage?.let {
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = it,
-                        color = MaterialTheme.colorScheme.primary
-                    )
+                    Text(text = it, color = MaterialTheme.colorScheme.primary)
                     Spacer(modifier = Modifier.height(8.dp))
                     Button(
                         onClick = {
-                            navController.navigate("cart/$userId")
+                            navController.navigate(Screen.Cart.createRoute(userId))
                         },
                         modifier = Modifier.fillMaxWidth()
                     ) {
@@ -164,12 +165,20 @@ fun ShoeDetailScreen(
 
                 errorMessage?.let {
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = it,
-                        color = MaterialTheme.colorScheme.error
-                    )
+                    Text(text = it, color = MaterialTheme.colorScheme.error)
                 }
             }
         }
+    }
+}
+
+// Deskripsi Dinamis Sepatu
+fun getDescriptionForShoe(brand: String?, gender: String?): String {
+    val brandName = brand ?: "Brand ternama"
+    return when (gender?.lowercase()) {
+        "men", "pria" -> "$brandName menghadirkan sepatu pria dengan desain maskulin dan kenyamanan maksimal. Cocok untuk aktivitas harian hingga olahraga ringan. Dilengkapi sol anti-slip dan material tahan lama."
+        "women", "wanita" -> "$brandName mempersembahkan sepatu wanita yang memadukan gaya elegan dan kenyamanan. Sempurna untuk tampil percaya diri di setiap langkah, baik santai maupun formal."
+        "unisex" -> "$brandName menghadirkan desain unisex yang trendi dan versatile. Pas digunakan oleh siapa saja, dalam berbagai suasana. Ringan, stylish, dan pastinya nyaman."
+        else -> "$brandName menghadirkan kenyamanan dan desain modern untuk semua kalangan. Sepatu ini cocok untuk berbagai aktivitas, menjadikan setiap langkah lebih percaya diri."
     }
 }
