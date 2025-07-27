@@ -43,6 +43,8 @@ android {
 
 dependencies {
 
+    implementation("androidx.compose.material3:material3:1.2.0")
+
     // Tambahkan di dependencies
     implementation("com.squareup.okhttp3:logging-interceptor:4.11.0")
 

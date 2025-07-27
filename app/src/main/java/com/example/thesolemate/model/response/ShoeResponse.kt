@@ -9,3 +9,7 @@ data class ShoeResponse(
     val image_url: String,
     val description: String
 )
+{
+    val fullImageUrl: String
+        get() = "http://10.0.2.2/thesolemate_api/Shoes/$image_url"
+}

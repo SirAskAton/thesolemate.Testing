@@ -15,16 +15,5 @@ class ShoeRepository(private val apiService: ApiService) {
         return apiService.getShoeById(id)
     }
 
-    suspend fun createShoe(request: ShoeRequest): Response<ShoeResponse> {
-        return apiService.createShoe(request)
-    }
-
-    suspend fun updateShoe(id: Int, request: ShoeRequest): Response<ShoeResponse> {
-        return apiService.updateShoe(id, request)
-    }
-
-    suspend fun deleteShoe(id: Int): Response<Unit> {
-        return apiService.deleteShoe(id)
-    }
 
 }

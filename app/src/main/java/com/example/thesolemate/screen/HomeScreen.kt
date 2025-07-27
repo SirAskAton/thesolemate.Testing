@@ -1,11 +1,12 @@
 package com.example.thesolemate.screen
 
+
 import android.widget.Toast
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.ShoppingCartCheckout
@@ -13,9 +14,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import coil.ImageLoader
 import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
 import com.example.thesolemate.R
@@ -26,8 +30,145 @@ import com.example.thesolemate.navigation.Screen
 import com.example.thesolemate.repository.CartRepository
 import com.example.thesolemate.session.SessionManager
 import kotlinx.coroutines.launch
+import okhttp3.OkHttpClient
 
-@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DropdownMenuFilter(
+    label: String,
+    options: List<String>,
+    selectedOption: String,
+    onOptionSelected: (String) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Box {
+        OutlinedButton(
+            onClick = { expanded = true },
+            colors = ButtonDefaults.outlinedButtonColors(
+                containerColor = Color.White,
+                contentColor = Color.Black
+            )
+        ) {
+            Text("$label: $selectedOption")
+        }
+
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            modifier = Modifier.background(Color.White)
+        ) {
+            options.forEach { option ->
+                DropdownMenuItem(
+                    text = {
+                        Text(option, color = Color.Black)
+                    },
+                    onClick = {
+                        onOptionSelected(option)
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun ShoeCard(
+    shoe: ShoeResponse,
+    userId: Int,
+    navController: NavController,
+    cartRepository: CartRepository,
+    context: android.content.Context,
+    onCartChanged: () -> Unit
+) {
+    val scope = rememberCoroutineScope()
+    var isAdding by remember { mutableStateOf(false) }
+
+    val imageLoader = ImageLoader.Builder(context)
+        .crossfade(true)
+        .okHttpClient {
+            OkHttpClient.Builder()
+                .addInterceptor { chain ->
+                    val newRequest = chain.request().newBuilder()
+                        .header("User-Agent", "Mozilla/5.0")
+                        .build()
+                    chain.proceed(newRequest)
+                }
+                .build()
+        }
+        .build()
+
+    val imagePainter = rememberAsyncImagePainter(
+        model = ImageRequest.Builder(context)
+            .data(shoe.image_url)
+            .crossfade(true)
+            .placeholder(R.drawable.missingitem)
+            .error(R.drawable.missingitem)
+            .build(),
+        imageLoader = imageLoader
+    )
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable {
+                navController.navigate(Screen.ShoeDetail.createRoute(shoe.id, userId))
+            },
+        elevation = CardDefaults.cardElevation(4.dp),
+        shape = MaterialTheme.shapes.medium
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Image(
+                painter = imagePainter,
+                contentDescription = shoe.name,
+                modifier = Modifier
+                    .height(120.dp)
+                    .fillMaxWidth()
+                    .padding(8.dp),
+                contentScale = ContentScale.Crop
+            )
+
+            Text(shoe.name, style = MaterialTheme.typography.titleMedium)
+            Text("Brand: ${shoe.brand}", style = MaterialTheme.typography.bodySmall)
+            Text("Rp${shoe.price}", style = MaterialTheme.typography.bodyMedium)
+            Spacer(modifier = Modifier.height(6.dp))
+
+            Button(
+                onClick = {
+                    scope.launch {
+                        isAdding = true
+                        try {
+                            val request = CartRequest(user_id = userId, shoe_id = shoe.id, quantity = 1)
+                            val response = cartRepository.addToCart(request)
+                            if (response.isSuccessful) {
+                                Toast.makeText(context, "Ditambahkan ke keranjang", Toast.LENGTH_SHORT).show()
+                                onCartChanged()
+                            } else {
+                                Toast.makeText(context, "Gagal menambahkan", Toast.LENGTH_SHORT).show()
+                            }
+                        } catch (e: Exception) {
+                            Toast.makeText(context, "Terjadi kesalahan", Toast.LENGTH_SHORT).show()
+                        } finally {
+                            isAdding = false
+                        }
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !isAdding
+            ) {
+                if (isAdding) {
+                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                } else {
+                    Text("Tambah")
+                }
+            }
+        }
+    }
+}
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun HomeScreen(
     navController: NavController,
@@ -38,20 +179,22 @@ fun HomeScreen(
     val context = LocalContext.current
     val session = remember { SessionManager(context) }
     val scope = rememberCoroutineScope()
-
     val userId = session.getUserId()
 
     var shoes by remember { mutableStateOf<List<ShoeResponse>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
-
-    // 👇 Track jumlah isi keranjang
     var cartItemCount by remember { mutableStateOf(0) }
 
-    // 🔁 Cek isi keranjang saat layar muncul
+    var selectedBrand by remember { mutableStateOf("Semua") }
+    var selectedGender by remember { mutableStateOf("Semua") }
+
+    val brandOptions = listOf("Semua", "Nike", "Adidas", "Puma")
+    val genderOptions = listOf("Semua", "Men", "Women", "Unisex")
+
     fun checkCart() {
         scope.launch {
             try {
-                val cartItems = cartRepository.getCart(userId) // Langsung dapat List<CartItem>
+                val cartItems = cartRepository.getCart(userId)
                 cartItemCount = cartItems.size
             } catch (e: Exception) {
                 cartItemCount = 0
@@ -59,7 +202,12 @@ fun HomeScreen(
         }
     }
 
-
+    fun filterShoes(list: List<ShoeResponse>): List<ShoeResponse> {
+        return list.filter {
+            (selectedBrand == "Semua" || it.brand.equals(selectedBrand, true)) &&
+                    (selectedGender == "Semua" || it.gender.equals(selectedGender, true))
+        }
+    }
 
     LaunchedEffect(true) {
         try {
@@ -75,105 +223,81 @@ fun HomeScreen(
         }
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        TopAppBar(
-            title = { Text("TheSoleMate") },
-            actions = {
-                IconButton(onClick = {
-                    navController.navigate(Screen.Cart.createRoute(userId))
-                }) {
-                    Icon(
-                        imageVector = if (cartItemCount > 0) Icons.Filled.ShoppingCartCheckout else Icons.Filled.ShoppingCart,
-                        contentDescription = "Keranjang"
-                    )
-                }
-            }
+    Box(modifier = Modifier.fillMaxSize()) {
+        // Background image full screen
+        Image(
+            painter = rememberAsyncImagePainter("https://static.vecteezy.com/system/resources/thumbnails/020/567/748/small/abstract-gradient-colorful-background-photo.jpg"),
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop
         )
 
-        if (loading) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(8.dp)
-            ) {
-                items(shoes.chunked(2)) { rowItems ->
-                    Row(modifier = Modifier.fillMaxWidth()) {
-                        for (shoe in rowItems) {
-                            Card(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .padding(8.dp)
-                                    .clickable {
-                                        navController.navigate(Screen.ShoeDetail.createRoute(shoe.id, userId))
-                                    },
-                                elevation = CardDefaults.cardElevation(4.dp)
-                            ) {
-                                Column(
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    modifier = Modifier.padding(8.dp)
-                                ) {
-                                    Image(
-                                        painter = rememberAsyncImagePainter(
-                                            ImageRequest.Builder(context)
-                                                .data(shoe.image_url)
-                                                .crossfade(true)
-                                                .error(R.drawable.missingitem)
-                                                .placeholder(R.drawable.missingitem)
-                                                .build()
-                                        ),
-                                        contentDescription = shoe.name,
-                                        modifier = Modifier
-                                            .size(100.dp)
-                                            .padding(8.dp)
-                                    )
-                                    Text(shoe.name, style = MaterialTheme.typography.titleMedium)
-                                    Text("Brand: ${shoe.brand}", style = MaterialTheme.typography.bodySmall)
-                                    Text("Rp${shoe.price}", style = MaterialTheme.typography.bodyMedium)
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Button(
-                                        onClick = {
-                                            scope.launch {
-                                                try {
-                                                    val cartRequest = CartRequest(
-                                                        user_id = userId,
-                                                        shoe_id = shoe.id,
-                                                        quantity = 1
-                                                    )
+        // Optional dark overlay
+        Box(modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.15f))
+        )
 
-                                                    val response = cartRepository.addToCart(cartRequest)
-
-                                                    if (response.isSuccessful && response.body() != null) {
-                                                        Toast.makeText(
-                                                            context,
-                                                            "Ditambahkan ke keranjang",
-                                                            Toast.LENGTH_SHORT
-                                                        ).show()
-                                                        checkCart() // 🔁 Cek ulang isi keranjang
-                                                    } else {
-                                                        Toast.makeText(
-                                                            context,
-                                                            "Gagal menambahkan",
-                                                            Toast.LENGTH_SHORT
-                                                        ).show()
-                                                    }
-                                                } catch (e: Exception) {
-                                                    Toast.makeText(context, "Terjadi kesalahan", Toast.LENGTH_SHORT).show()
-                                                }
-                                            }
-                                        },
-                                        modifier = Modifier.padding(4.dp)
-                                    ) {
-                                        Text("Tambah")
-                                    }
-                                }
-                            }
+        Scaffold(
+            containerColor = Color.Transparent,
+            topBar = {
+                TopAppBar(
+                    title = { Text("TheSoleMate", style = MaterialTheme.typography.titleLarge) },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = Color.Transparent,
+                        titleContentColor = Color.White,
+                        actionIconContentColor = Color.White
+                    ),
+                    actions = {
+                        IconButton(onClick = {
+                            navController.navigate(Screen.Cart.createRoute(userId))
+                        }) {
+                            Icon(
+                                imageVector = if (cartItemCount > 0)
+                                    Icons.Filled.ShoppingCartCheckout
+                                else
+                                    Icons.Filled.ShoppingCart,
+                                contentDescription = "Keranjang"
+                            )
                         }
-                        if (rowItems.size < 2) {
-                            Spacer(modifier = Modifier.weight(1f))
+                    }
+                )
+            }
+        ) { padding ->
+
+            if (loading) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
+            } else {
+                Column(
+                    modifier = Modifier
+                        .padding(padding)
+                        .padding(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        DropdownMenuFilter("Brand", brandOptions, selectedBrand) { selectedBrand = it }
+                        DropdownMenuFilter("Gender", genderOptions, selectedGender) { selectedGender = it }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    val filteredShoes = filterShoes(shoes)
+
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(2),
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        contentPadding = PaddingValues(bottom = 80.dp)
+                    ) {
+                        items(filteredShoes) { shoe ->
+                            ShoeCard(shoe, userId, navController, cartRepository, context) {
+                                checkCart()
+                            }
                         }
                     }
                 }

@@ -4,8 +4,10 @@ import android.content.Context
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.navArgument
 import com.example.thesolemate.data.remote.ApiClient
 import com.example.thesolemate.data.repository.ShoeRepository
 import com.example.thesolemate.repository.CartRepository
@@ -66,7 +68,15 @@ fun SetupNavGraph(navController: NavHostController, context: Context) {
             )
         }
 
+        composable(
+            route = "receipt_screen/{userId}",
+            arguments = listOf(navArgument("userId") { type = NavType.IntType })
+        ) { backStackEntry ->
+            val userId = backStackEntry.arguments?.getInt("userId") ?: 0
+            ReceiptScreen(navController = navController, userId = userId)
+        }
 
-        // Tambahkan halaman lainnya seperti Receipt jika ada
+
     }
 }
+
