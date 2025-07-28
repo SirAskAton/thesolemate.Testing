@@ -1,6 +1,7 @@
 package com.example.thesolemate.screen
 
 import android.widget.Toast
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -12,9 +13,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import com.example.thesolemate.R
 import com.example.thesolemate.data.remote.ApiClient
 import com.example.thesolemate.model.request.DeleteCartRequest
 import com.example.thesolemate.model.request.UpdateCartRequest
@@ -46,7 +49,7 @@ fun CartScreen(navController: NavController) {
                 } else {
                     Toast.makeText(context, "Gagal memuat cart", Toast.LENGTH_SHORT).show()
                 }
-            } catch (e: Exception) {
+            } catch (e: Exception) {  // Menangkap kesalahan seperti koneksi internet gagal
                 Toast.makeText(context, "Terjadi kesalahan", Toast.LENGTH_SHORT).show()
             } finally {
                 isLoading = false
@@ -63,9 +66,11 @@ fun CartScreen(navController: NavController) {
                 if (response.isSuccessful && response.body()?.success == true) {
                     loadCart()
                 } else {
+                    // Jika server merespons dengan error
                     Toast.makeText(context, "Gagal update jumlah", Toast.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) {
+                // Menangkap kesalahan jaringan atau exception lainnya
                 Toast.makeText(context, "Error update qty", Toast.LENGTH_SHORT).show()
             }
         }
@@ -81,9 +86,11 @@ fun CartScreen(navController: NavController) {
                     loadCart()
                     Toast.makeText(context, "Item berhasil dihapus", Toast.LENGTH_SHORT).show()
                 } else {
+                    // Jika status HTTP bukan 200 dan tidak sukses
                     Toast.makeText(context, "Gagal menghapus item", Toast.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) {
+                // Menangkap error koneksi atau kesalahan tak terduga
                 Toast.makeText(context, "Terjadi error saat hapus item", Toast.LENGTH_SHORT).show()
             }
         }
@@ -100,6 +107,7 @@ fun CartScreen(navController: NavController) {
             try {
                 val response = ApiClient.apiService.checkout(mapOf("user_id" to userId))
                 if (response.isSuccessful && response.body()?.success == true) {
+                    // Berhasil checkout, navigasi ke halaman struk
                     navController.currentBackStackEntry?.savedStateHandle?.set("receipt_items", cartItems)
                     navController.currentBackStackEntry?.savedStateHandle?.set("total_price", totalHarga)
                     navController.currentBackStackEntry?.savedStateHandle?.set("alamat_pengiriman", address)
@@ -109,9 +117,11 @@ fun CartScreen(navController: NavController) {
                     Toast.makeText(context, "Checkout berhasil!", Toast.LENGTH_SHORT).show()
                     navController.navigate("receipt_screen/$userId")
                 } else {
+                    // Jika server mengembalikan pesan error
                     Toast.makeText(context, response.body()?.message ?: "Gagal checkout", Toast.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) {
+                // Menangkap error selain dari respons HTTP (contohnya: timeout, internet mati)
                 Toast.makeText(context, "Terjadi kesalahan saat checkout", Toast.LENGTH_SHORT).show()
             } finally {
                 isCheckoutLoading = false
@@ -137,64 +147,64 @@ fun CartScreen(navController: NavController) {
             )
 
             Column(modifier = Modifier.fillMaxSize()) {
-                LazyColumn(
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(16.dp)
-                ) {
-                    items(cartItems) { item ->
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 8.dp),
-                            elevation = CardDefaults.cardElevation(4.dp)
-                        ) {
-                            Row(
+                if (cartItems.isNotEmpty()) {
+                    LazyColumn(
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(16.dp)
+                    ) {
+                        items(cartItems) { item ->
+                            Card(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(16.dp),
-                                verticalAlignment = Alignment.CenterVertically
+                                    .padding(vertical = 8.dp),
+                                elevation = CardDefaults.cardElevation(4.dp)
                             ) {
-                                AsyncImage(
-                                    model = item.image_url,
-                                    contentDescription = item.shoe_name,
-                                    modifier = Modifier.size(80.dp)
-                                )
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    AsyncImage(
+                                        model = item.image_url,
+                                        contentDescription = item.shoe_name,
+                                        modifier = Modifier.size(80.dp)
+                                    )
 
-                                Spacer(modifier = Modifier.width(16.dp))
+                                    Spacer(modifier = Modifier.width(16.dp))
 
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(item.shoe_name ?: "Tanpa Nama")
-                                    Text("Harga: Rp${item.price}")
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text("Jumlah: ")
-                                        IconButton(onClick = {
-                                            if (item.quantity > 1) {
-                                                updateQuantity(item.cart_id, item.quantity - 1)
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(item.shoe_name ?: "Tanpa Nama")
+                                        Text("Harga: Rp${item.price}")
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Text("Jumlah: ")
+                                            IconButton(onClick = {
+                                                if (item.quantity > 1) {
+                                                    updateQuantity(item.cart_id, item.quantity - 1)
+                                                }
+                                            }) {
+                                                Text("-")
                                             }
-                                        }) {
-                                            Text("-")
-                                        }
-                                        Text("${item.quantity}")
-                                        IconButton(onClick = {
-                                            updateQuantity(item.cart_id, item.quantity + 1)
-                                        }) {
-                                            Text("+")
+                                            Text("${item.quantity}")
+                                            IconButton(onClick = {
+                                                updateQuantity(item.cart_id, item.quantity + 1)
+                                            }) {
+                                                Text("+")
+                                            }
                                         }
                                     }
-                                }
 
-                                IconButton(onClick = {
-                                    deleteCartItem(item.cart_id)
-                                }) {
-                                    Icon(Icons.Default.Delete, contentDescription = "Hapus")
+                                    IconButton(onClick = {
+                                        deleteCartItem(item.cart_id)
+                                    }) {
+                                        Icon(Icons.Default.Delete, contentDescription = "Hapus")
+                                    }
                                 }
                             }
                         }
                     }
-                }
 
-                if (cartItems.isNotEmpty()) {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -229,8 +239,21 @@ fun CartScreen(navController: NavController) {
                         }
                     }
                 } else {
+                    // TAMPILKAN GAMBAR SAAT KOSONG
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("Keranjang kosong", style = MaterialTheme.typography.bodyLarge)
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Image(
+                                painter = painterResource(id = R.drawable.empty),
+                                contentDescription = "yah keranjang mu Kosong",
+                                modifier = Modifier
+                                    .size(180.dp)
+                                    .padding(bottom = 16.dp)
+                            )
+                            Text("yah keranjang mu Kosong", style = MaterialTheme.typography.bodyLarge)
+                        }
                     }
                 }
             }

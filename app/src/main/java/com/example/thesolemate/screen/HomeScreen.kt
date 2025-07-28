@@ -1,6 +1,5 @@
 package com.example.thesolemate.screen
 
-
 import android.widget.Toast
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
@@ -37,7 +36,7 @@ fun DropdownMenuFilter(
     label: String,
     options: List<String>,
     selectedOption: String,
-    onOptionSelected: (String) -> Unit
+    onOptionSelected: (String) -> Unit // // Fungsi callback saat user memilih opsi
 ) {
     var expanded by remember { mutableStateOf(false) }
 
@@ -133,6 +132,7 @@ fun ShoeCard(
 
             Text(shoe.name, style = MaterialTheme.typography.titleMedium)
             Text("Brand: ${shoe.brand}", style = MaterialTheme.typography.bodySmall)
+            Text("Gender: ${shoe.gender}", style = MaterialTheme.typography.bodySmall)
             Text("Rp${shoe.price}", style = MaterialTheme.typography.bodyMedium)
             Spacer(modifier = Modifier.height(6.dp))
 
@@ -144,13 +144,13 @@ fun ShoeCard(
                             val request = CartRequest(user_id = userId, shoe_id = shoe.id, quantity = 1)
                             val response = cartRepository.addToCart(request)
                             if (response.isSuccessful) {
-                                Toast.makeText(context, "Ditambahkan ke keranjang", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "Ditambahkan ke keranjang", Toast.LENGTH_SHORT).show()  // Jika berhasil ditambahkan ke keranjang
                                 onCartChanged()
                             } else {
-                                Toast.makeText(context, "Gagal menambahkan", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "Gagal menambahkan", Toast.LENGTH_SHORT).show()  // Jika gagal karena alasan dari server (misalnya status 400, 500, dll)
                             }
                         } catch (e: Exception) {
-                            Toast.makeText(context, "Terjadi kesalahan", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "Terjadi kesalahan", Toast.LENGTH_SHORT).show() //// Menangani semua jenis eror Bisa karena null pointer, JSON error, server error yang tidak ditangani, dsb.
                         } finally {
                             isAdding = false
                         }
@@ -168,6 +168,7 @@ fun ShoeCard(
         }
     }
 }
+
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun HomeScreen(
@@ -189,7 +190,7 @@ fun HomeScreen(
     var selectedGender by remember { mutableStateOf("Semua") }
 
     val brandOptions = listOf("Semua", "Nike", "Adidas", "Puma")
-    val genderOptions = listOf("Semua", "Men", "Women", "Unisex")
+    val genderOptions = listOf("Semua", "Male", "Female", "Unisex")
 
     fun checkCart() {
         scope.launch {
@@ -216,15 +217,15 @@ fun HomeScreen(
                 shoes = response.body() ?: emptyList()
             }
         } catch (e: Exception) {
-            Toast.makeText(context, "Gagal memuat sepatu", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "Gagal memuat sepatu", Toast.LENGTH_SHORT).show() // // Jika gagal karena error saat mengambil data dari server (HTTP error, tidak ada koneksi
         } finally {
+            // Pastikan loading berhenti walaupun terjadi error
             loading = false
             checkCart()
         }
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        // Background image full screen
         Image(
             painter = rememberAsyncImagePainter("https://static.vecteezy.com/system/resources/thumbnails/020/567/748/small/abstract-gradient-colorful-background-photo.jpg"),
             contentDescription = null,
@@ -232,11 +233,7 @@ fun HomeScreen(
             contentScale = ContentScale.Crop
         )
 
-        // Optional dark overlay
-        Box(modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.15f))
-        )
+        Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.15f)))
 
         Scaffold(
             containerColor = Color.Transparent,
@@ -264,16 +261,13 @@ fun HomeScreen(
                 )
             }
         ) { padding ->
-
             if (loading) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
                 }
             } else {
                 Column(
-                    modifier = Modifier
-                        .padding(padding)
-                        .padding(12.dp)
+                    modifier = Modifier.padding(padding).padding(12.dp)
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),

@@ -74,10 +74,10 @@ fun LoginScreen(navController: NavHostController) {
 
             // Logo aplikasi
             Image(
-                painter = painterResource(id = R.drawable.logo4),
+                painter = painterResource(id = R.drawable.solematelogo_putih),
                 contentDescription = "Logo",
                 modifier = Modifier
-                    .height(100.dp)
+                    .height(250.dp)
                     .padding(bottom = 24.dp)
             )
 

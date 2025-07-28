@@ -54,7 +54,7 @@ fun RegisterScreen(navController: NavHostController) {
     val coroutineScope = rememberCoroutineScope() // Untuk menjalankan API di background
 
     Box(modifier = Modifier.fillMaxSize()) {
-        // Gambar background
+
         Image(
             painter = painterResource(id = R.drawable.gambar1),
             contentDescription = null,
@@ -80,10 +80,10 @@ fun RegisterScreen(navController: NavHostController) {
         ) {
             // Logo aplikasi
             Image(
-                painter = painterResource(id = R.drawable.logo4),
+                painter = painterResource(id = R.drawable.solematelogo_putih),
                 contentDescription = "Logo",
                 modifier = Modifier
-                    .size(100.dp)
+                    .size(250.dp)
                     .padding(bottom = 16.dp)
             )
 
@@ -181,7 +181,7 @@ fun RegisterScreen(navController: NavHostController) {
             // Tombol Register
             Button(
                 onClick = {
-                    focusManager.clearFocus() // Menyembunyikan keyboard
+                    focusManager.clearFocus()
                     // Validasi input
                     fullNameError = fullName.isBlank()
                     usernameError = username.isBlank()
@@ -215,13 +215,13 @@ fun RegisterScreen(navController: NavHostController) {
                                 }
                             } catch (e: HttpException) {
                                 isLoading = false
-                                Toast.makeText(context, "Http Error: ${e.message()}", Toast.LENGTH_LONG).show()
+                                Toast.makeText(context, "Http Error: ${e.message()}", Toast.LENGTH_LONG).show() // Menangani kesalahan HTTP dari server.
                             } catch (e: IOException) {
                                 isLoading = false
-                                Toast.makeText(context, "Network Error: ${e.message}", Toast.LENGTH_LONG).show()
+                                Toast.makeText(context, "Network Error: ${e.message}", Toast.LENGTH_LONG).show() //Menangani kesalahan dari koneksi internet.
                             } catch (e: Exception) {
                                 isLoading = false
-                                Toast.makeText(context, "Error: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+                                Toast.makeText(context, "Error: ${e.localizedMessage}", Toast.LENGTH_LONG).show() // Menangkap error yang belum ditangani sebelumnya
                             }
                         }
                     }
